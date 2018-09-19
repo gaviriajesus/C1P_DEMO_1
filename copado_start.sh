@@ -51,5 +51,5 @@ curl -sD - -XPOST "https://www.googleapis.com/upload/drive/v3/files?uploadType=r
 echo "[c1p document job] Uploading GDrive file"
 curl -sL -XPOST "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&part=snippet&upload_id=$(cat ./.fileid)" -H "Authorization: Bearer $(cat ./.drive_token)" -H "Content-type: application/zip" --data-binary @opportunities.zip > /dev/null
 
-notify_status "Copado_rulez" "100" 
+notify_status "Work_Done" "100" 
 echo "[c1p document job] Finished"
