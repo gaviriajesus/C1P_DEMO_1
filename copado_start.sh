@@ -4,14 +4,14 @@ echo "[c1p document job] invoked copado job"
 
 CSV_FILE_NAME=${FILE_NAME:-opportunities.csv}
 
-notify_status "Retrieving_data" "20" 
+notify_status "Retrieving%20Data" "20" 
 echo "[c1p document job] Retrieving data"
 # get all the closed-won opportunities
 curl -sS "${COPADO_SF_SERVICE_ENDPOINT}query?q=SELECT+Id,+Name,+StageName,+AccountId,+Account.Name,+(select+Id,+Pricebookentry.product2.name+from+OpportunityLineItems)from+opportunity+WHERE+StageName+=+'Closed+Won'" \
 -H 'Authorization: Bearer '"$COPADO_SF_AUTH_HEADER"'' \
 | jq -c -r '["OpportunityId","OpportunityName","OpportunityStageName","AccountId","AccountName","ProductId","ProductName"], (.records[] | [.Id, .Name, .StageName, .AccountId, .Account.Name, .OpportunityLineItems.records[0].Id, .OpportunityLineItems.records[0].PricebookEntry.Product2.Name ]) | @csv' > $CSV_FILE_NAME
 
-notify_status "Retrieving_attachments" "40"
+notify_status "Retrieving%20Attachments" "40"
 # download all attachment files for the opportunities
 echo "[c1p document job] Downloading files"
 mkdir attachments
@@ -24,12 +24,12 @@ while read docId; do
   curl -sS "${COPADO_SF_SERVICE_ENDPOINT}sobjects/ContentVersion/$docId/VersionData"  -H 'Authorization: Bearer '"$COPADO_SF_AUTH_HEADER"'' -o "./attachments/$docId/$(cat ./.curr.file.name)"
 done <./.content.doc.id
 
-notify_status "Compressing_data" "50"
+notify_status "Compressing%20Data" "50"
 echo "[c1p document job] Compressing data"
 # zip all the attachments and the opportinities csv
 zip -qr --password copado opportunities.zip $CSV_FILE_NAME attachments/* ./.opportunities.id ./.content.doc.id
 
-notify_status "Uploading_data_to_FTP" "60" 
+notify_status "Uploading%20data%20to%20FTP" "60" 
 echo "[c1p document job] Uploading FTP data"
 # upload to FTP server
 curl -sS -T opportunities.zip -u "$FTP_USER":"$FTP_PWD" "$FTP_URL3/opportunities-$(date +%s).zip"
@@ -39,7 +39,7 @@ curl -sS -T opportunities.zip -u "$FTP_USER":"$FTP_PWD" "$FTP_URL3/opportunities
 # 1.- Enable oauth access to your drive account
 # 2.- request a CODE https://accounts.google.com/o/oauth2/auth?client_id=XXX&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive
 # 3.- login to get the access_token curl -XPOST --data "code=CODE&client_id=XXX&client_secret=YYY&redirect_uri=urn:ietf:wg:oauth:2.0:oob&grant_type=authorization_code" "https://accounts.google.com/o/oauth2/token"
-notify_status "Uploading_data_to_Google_Drive" "80" 
+notify_status "Uploading%20data%20to%20Google%20Drive" "80" 
 echo "[c1p document job] Uploading GDrive data"
 # get access token
 echo "[c1p document job] Getting GDrive access token"
@@ -51,5 +51,5 @@ curl -sD - -XPOST "https://www.googleapis.com/upload/drive/v3/files?uploadType=r
 echo "[c1p document job] Uploading GDrive file"
 curl -sL -XPOST "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&part=snippet&upload_id=$(cat ./.fileid)" -H "Authorization: Bearer $(cat ./.drive_token)" -H "Content-type: application/zip" --data-binary @opportunities.zip > /dev/null
 
-notify_status "Work_Done" "100" 
+notify_status "Upload%20Completed" "100" 
 echo "[c1p document job] Finished"
