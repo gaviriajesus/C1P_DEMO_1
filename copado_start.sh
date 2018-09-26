@@ -1,18 +1,23 @@
 #!/bin/bash
-
 echo "[c1p document job] invoked copado job"
 
 CSV_FILE_NAME=${FILE_NAME:-opportunities.csv}
-
 notify_status "Retrieving%20Data" "20" 
 echo "[c1p document job] Retrieving data"
-# get all the closed-won opportunities
+
+#////////////////////////////////////////
+# GET ALL THE CLOSED-WON OPPORTUNITIES
+#////////////////////////////////////////
+
 curl -sS "${COPADO_SF_SERVICE_ENDPOINT}query?q=SELECT+Id,+Name,+StageName,+AccountId,+Account.Name,+(select+Id,+Pricebookentry.product2.name+from+OpportunityLineItems)from+opportunity+WHERE+StageName+=+'Closed+Won'" \
 -H 'Authorization: Bearer '"$COPADO_SF_AUTH_HEADER"'' \
 | jq -c -r '["OpportunityId","OpportunityName","OpportunityStageName","AccountId","AccountName","ProductId","ProductName"], (.records[] | [.Id, .Name, .StageName, .AccountId, .Account.Name, .OpportunityLineItems.records[0].Id, .OpportunityLineItems.records[0].PricebookEntry.Product2.Name ]) | @csv' > $CSV_FILE_NAME
-
 notify_status "Retrieving%20Attachments" "40"
-# download all attachment files for the opportunities
+
+#////////////////////////////////////////
+# DOWNLOAD ALL ATTACHMENT AND FILES FOR THE OPPORTUNITIES
+#////////////////////////////////////////
+
 echo "[c1p document job] Downloading files"
 mkdir attachments
 curl -sS "${COPADO_SF_SERVICE_ENDPOINT}query?q=SELECT+Id,+Name,+StageName,+AccountId,+Account.Name,+(select+Id,+Pricebookentry.product2.name+from+OpportunityLineItems)from+opportunity+WHERE+StageName+=+'Closed+Won'" -H 'Authorization: Bearer '"$COPADO_SF_AUTH_HEADER"'' | jq -c -r '.records[] | [.Id]' | sed "s/\"/'/g" | sed "s/[^a-zA-Z0-9']/ /g" | tr '\n' ',' | tr -d " " | sed 's/.$//' > ./.opportunities.id
@@ -26,15 +31,24 @@ done <./.content.doc.id
 
 notify_status "Compressing%20Data" "50"
 echo "[c1p document job] Compressing data"
-# zip all the attachments and the opportinities csv
+
+#//////////////////////////////
+# ZIP ALL THE FILES AND THE CSV 
+#//////////////////////////////
 zip -qr --password copado opportunities.zip $CSV_FILE_NAME attachments/* ./.opportunities.id ./.content.doc.id
 
 notify_status "Uploading%20data%20to%20FTP" "60" 
 echo "[c1p document job] Uploading FTP data"
-# upload to FTP server
+
+#//////////////////////////
+# UPLOAD TO THE FTP SERVER
+#//////////////////////////
 curl -sS -T opportunities.zip -u "$FTP_USER":"$FTP_PWD" "$FTP_URL3/opportunities-$(date +%s).zip"
 
-#
+#///////////////////////
+# UPLOAD TO GOOGLE DRIVE
+#///////////////////////
+
 # before you will need:
 # 1.- Enable oauth access to your drive account
 # 2.- request a CODE https://accounts.google.com/o/oauth2/auth?client_id=XXX&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive
